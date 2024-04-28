@@ -819,10 +819,6 @@ LOCALPROC DoKeyCode(SDL_keysym *r, blnr down)
 }
 #endif /* SDL_MAJOR_VERSION */
 
-GLOBALOSGLUPROC MinivMacAPI_UpdateKey( uint8_t Key, uint8_t Down ) {
-	Keyboard_UpdateKeyMap2( Key, Down );
-}
-
 LOCALPROC DisableKeyRepeat(void)
 {
 	/*
@@ -2072,7 +2068,6 @@ int minivmac_main(int argc, char **argv)
 	my_argv = argv;
 
 	ZapOSGLUVars();
-
 	if (InitOSGLU()) {
 		ProgramMain();
 	}

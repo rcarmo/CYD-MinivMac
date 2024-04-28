@@ -1,22 +1,20 @@
 #include <string.h>
 
 #include <Arduino.h>
-#include <SPI.h>
 #include <FS.h>
 #include <SPIFFS.h>
-#include <SD_MMC.h>
 #include "bb_spi_lcd.h"
 
 #include "ArduinoAPI.h"
 #include "ArduinoDraw.h"
 
 #define DisplayWidth 240
-#define DisplayHeight 320
+#define DisplayHeight 240
 
-const int Pin_CS = 1;
+const int Pin_CS = -1;
 const int Pin_DC = 2;
 const int Pin_RST = 0;
-const int Pin_MISO = 12;
+const int Pin_MISO = -1;
 const int Pin_MOSI = 13;
 const int Pin_CLK = 14;
 
@@ -57,33 +55,28 @@ void RenderTask( void* Param ) {
         xEventGroupWaitBits( RenderTaskEventHandle, DrawScreenEvent, pdTRUE, pdTRUE, portMAX_DELAY );
 
         xSemaphoreTake( RenderTaskLock, portMAX_DELAY );
-            DrawWindow( ( const uint8_t* ) EmScreenPtr, x, y );
+            DrawWindowSubpixel( ( const uint8_t* ) EmScreenPtr, x, y );
         xSemaphoreGive( RenderTaskLock );
     }
 }
 
 void setup( void ) {
-    //Serial.begin( 115200 );
+    Serial.begin( 115200 );
 
-    Serial.begin( 115200, 134217756U, 3, -1, false, 20000UL );
+    spilcdInit( LCD_ST7789_NOCS, 0, 0, 0, 40000000, Pin_CS, Pin_DC, Pin_RST, -1, Pin_MISO, Pin_MOSI, Pin_CLK );
+    spilcdFill( 0, 1 );
 
-    spilcdInit( LCD_ILI9341, 0, 0, 0, 40000000, Pin_CS, Pin_DC, Pin_RST, -1, Pin_MISO, Pin_MOSI, Pin_CLK );
-    //spilcdSetOrientation( LCD_ORIENTATION_ROTATED );
-    spilcdFill( 0xAB40, 1 );
-
-    //SPIFFS.begin( );
-
-    SD_MMC.begin( "/sdcard", true );
+    SPIFFS.begin( );
 
     Setup1BPPTable( );
     SetupScalingTable( );
+
+    pinMode( 4, OUTPUT );
 
     RenderTaskEventHandle = xEventGroupCreate( );
     RenderTaskLock = xSemaphoreCreateMutex( );
 
     xTaskCreatePinnedToCore( RenderTask, "RenderTask", 4096, NULL, 0, &RenderTaskHandle, 0 );
-
-    delay( 150 );
 
     Serial.println( ( int ) RenderTaskEventHandle, 16 );
     Serial.println( ( int ) RenderTaskLock, 16 );
@@ -152,7 +145,7 @@ void ArduinoAPI_Delay( uint32_t MSToDelay ) {
 ArduinoFile ArduinoAPI_open( const char* Path, const char* Mode ) {
     char SPIFFSPath[ 256 ];
 
-    snprintf( SPIFFSPath, sizeof( SPIFFSPath ), "/sdcard/%s", Path );
+    snprintf( SPIFFSPath, sizeof( SPIFFSPath ), "/spiffs/%s", Path );
     return ( ArduinoFile ) fopen( SPIFFSPath, Mode );
 }
 
@@ -251,7 +244,6 @@ void ArduinoAPI_CheckForEvents( void ) {
 bool Changed = false;
 
 void ArduinoAPI_ScreenChanged( int Top, int Left, int Bottom, int Right ) {
-    Serial.println( __func__ );
     Changed = true;
 }
 

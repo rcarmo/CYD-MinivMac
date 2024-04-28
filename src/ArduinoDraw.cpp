@@ -71,8 +71,7 @@ IRAM_ATTR void DrawWindow( const uint8_t* Src, int SrcX, int SrcY ) {
 
     ArduinoAPI_GetDisplayDimensions( &DisplayWidth, &DisplayHeight );
 
-    SrcX = ( SrcX >= ( vMacScreenWidth - DisplayWidth ) ) ? ( vMacScreenWidth - DisplayWidth - 0 ) : SrcX;
-    SrcY = ( SrcY >= ( vMacScreenHeight - DisplayHeight ) ) ? ( vMacScreenHeight - DisplayHeight - 0 ) : SrcY;
+    SrcY = ( SrcY >= ( vMacScreenHeight - DisplayHeight ) ) ? ( vMacScreenHeight - DisplayHeight - 1 ) : SrcY;
 
     Width = ( vMacScreenWidth >= DisplayWidth ) ? DisplayWidth : vMacScreenWidth;
     Height = ( vMacScreenHeight >= DisplayHeight ) ? DisplayHeight : vMacScreenHeight;
@@ -152,12 +151,12 @@ IRAM_ATTR void DrawWindowSubpixel( const uint8_t* Src, int SrcX, int SrcY ) {
 
     Temp = ( DisplayWidth * 3 ) / 2;
 
-    //SrcX = ( SrcX >= ( vMacScreenWidth - Temp ) ) ? ( vMacScreenWidth - Temp ) : SrcX;
-    //SrcY = ( SrcY >= ( vMacScreenHeight - DisplayHeight ) ) ? ( vMacScreenHeight - DisplayHeight ) : SrcY;
-    //DisplayWidth = Temp >= DisplayWidth ? DisplayWidth : Temp;
+    SrcX = ( SrcX >= ( vMacScreenWidth - Temp ) ) ? ( vMacScreenWidth - Temp ) : SrcX;
+    SrcY = ( SrcY >= ( vMacScreenHeight - DisplayHeight ) ) ? ( vMacScreenHeight - DisplayHeight ) : SrcY;
+    DisplayWidth = Temp >= DisplayWidth ? DisplayWidth : Temp;
 
-    //DisplayWidth = vMacScreenWidth > DisplayWidth ? DisplayWidth : vMacScreenWidth;
-    //DisplayHeight = vMacScreenWidth > DisplayHeight ? DisplayHeight : vMacScreenHeight;
+    DisplayWidth = vMacScreenWidth > DisplayWidth ? DisplayWidth : vMacScreenWidth;
+    DisplayHeight = vMacScreenWidth > DisplayHeight ? DisplayHeight : vMacScreenHeight;
 
     ArduinoAPI_SetAddressWindow( 0, 0, DisplayWidth, DisplayHeight );
 
@@ -186,4 +185,53 @@ IRAM_ATTR void DrawWindowSubpixel( const uint8_t* Src, int SrcX, int SrcY ) {
 
         ArduinoAPI_WritePixels( ScreenBuffer, DisplayWidth );
     }
+
+#if 0
+	// 8 pixels in, 6 pixels out
+	const float PixRatio = 8.0f / 6.0f;
+	const uint8_t* SrcLinePtr = NULL;
+	uint16_t* Dst = ScreenBuffer;
+	uint32_t Data = 0;
+    int DisplayWidth = 0;
+    int DisplayHeight = 0;
+    int Width = 0;
+    int Height = 0;
+	int h = 0;
+	int x = 0;
+	int i = 0;
+
+	// Align to 8px
+	SrcX &= ~0x07;
+
+    ArduinoAPI_GetDisplayDimensions( &DisplayWidth, &DisplayHeight );
+        Width = ( ( DisplayWidth * 3 ) / 2 );
+
+        Width = 240;
+        Height = 240;
+	ArduinoAPI_SetAddressWindow( 0, 0, Width, Height );
+
+		for ( h = 0; h < Height; h++ ) {
+			SrcLinePtr = &Src[ ( SrcY + h ) * ( vMacScreenWidth / 8 ) ];
+			SrcLinePtr+= ( SrcX / 8 );
+
+			Dst = ScreenBuffer;
+
+			for ( x = 0; x < Width; x+= 16 ) {
+				Data = ( *SrcLinePtr++ ) << 24;
+				Data |= ( *SrcLinePtr++ ) << 16;
+				Data |= ( *SrcLinePtr++ ) << 8;
+
+				Data = ~Data;
+
+				for ( i = 0; i < 8; i++ ) {
+					*Dst++ = SubpxDecodeTable_Wide[ ( Data >> 29 ) & 0x07 ][ 0 ];
+					*Dst++ = SubpxDecodeTable_Wide[ ( Data >> 29 ) & 0x07 ][ 1 ];
+
+					Data<<= 3;
+				}
+			}
+
+            ArduinoAPI_WritePixels( ScreenBuffer, Width * 2 );
+		}
+#endif
 }
